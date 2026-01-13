@@ -1,1 +1,1 @@
-# ADS-509_LLM
+# ADS 509 Applied Large Language Models
