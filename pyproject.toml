@@ -1,0 +1,18 @@
+[project]
+name = "ads-509-llm"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "April Chia", email = "achia@sandiego.edu" },
+    { name = "Taylor Kirk", email = "tkirk@sandiego.edu" },
+    { name = "Tommy Baron", email = "tbarron@sandiego.edu" },
+    { name = "Celina Velazquez", email = "celinavelazquez@sandiego.edu" }
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "bs4>=0.0.2",
+    "datetime>=6.0",
+    "pandas>=2.3.3",
+    "requests>=2.32.5",
+]
