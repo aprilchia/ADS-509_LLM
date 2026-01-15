@@ -5,6 +5,7 @@ import time
 import random
 import re
 from datetime import datetime
+from sleepy import sleep_politely
 
 # --- HELPER FUNCTIONS ---
 
@@ -154,7 +155,7 @@ def scrape_all_comments_metafilter(main_df):
             comments = parse_comments_metafilter(soup, url)
             all_comments.extend(comments)
             
-            time.sleep(random.uniform(1, 3))
+            sleep_politely()
         except Exception as e:
             print(f"Error scraping thread {url}: {e}")
             
