@@ -1,2 +1,0 @@
-- add try/except and more commentary to hn_scrape
-- add output paths and save files for scraping scripts
