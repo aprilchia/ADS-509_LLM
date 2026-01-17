@@ -5,7 +5,7 @@ import time
 import random
 import re
 from datetime import datetime
-from sleepy import sleep_politely
+from utils.sleepy import sleep_politely
 
 # --- HELPER FUNCTIONS ---
 

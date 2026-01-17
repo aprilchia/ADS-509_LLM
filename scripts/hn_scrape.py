@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import requests
 import pandas as pd
-from sleepy import sleep_politely
+from utils.sleepy import sleep_politely
 from bs4 import BeautifulSoup
 from typing import Dict, Any, List
 
