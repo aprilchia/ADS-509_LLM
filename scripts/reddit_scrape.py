@@ -4,11 +4,10 @@ import time
 import random
 import requests
 import pandas as pd
-from bs4 import BeautifulSoup
 
 ## Setup
 
-HEADERS = {'User-Agent': 'MADS-FinalProject/1.0 achia@sandiego.edu'}
+HEADERS = {"User-Agent": "MADS-FinalProject/1.0 achia@sandiego.edu"}
 
 def sleep_politely(sleep_range = (1.0, 2.0)):
     time.sleep(random.uniform(*sleep_range))
@@ -134,7 +133,9 @@ for idx, row in posts_df.iterrows():
 comments_df = pd.DataFrame(all_comments)
 print('Total comments collected:', len(comments_df))
 comments_df.head()
+
 ## Combine Datasets
+
 merged_df = comments_df.merge(
     posts_df,
     on = 'post_id',
