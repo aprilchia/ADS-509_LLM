@@ -20,17 +20,19 @@ def parse_main_page_metafilter(soup):
     """Parses the tag/search feed page for post summaries."""
     posts_data = []
     skipped_posts = []
-    
+
+    # Get post titles and thread links from h2.posttitle elements
+    posts = soup.find_all("h2", class_="posttitle")
     post_summaries = soup.find_all('div', class_="copy post")
-    
+
     for idx, post in enumerate(post_summaries):
         try:
-            title_link = post.find('a')
-            post_title = title_link.text
-            external_link = title_link['href']
-            
-            # The link to the actual Metafilter thread is inside a span
-            thread_link = post.find('span').find('a')['href']
+            # Get title and thread_link from h2 elements
+            post_title = posts[idx].get_text(strip=True)
+            thread_link = posts[idx].find('a')['href']
+
+            # Get external link from the post summary (first link)
+            external_link = post.find('a')['href']
             
             # Metadata section (OP and Date)
             byline = post.find('span', class_='smallcopy postbyline')
@@ -66,11 +68,13 @@ def parse_comments_metafilter(post_soup, thread_url):
     """Parses individual comments from a specific post thread."""
     comments_data = []
     comment_blocks = post_soup.find_all('div', class_='comments')
+    pattern = re.compile(r"\.?\s*posted\sby.*") # remove the .posted by artifact that gets pulled with the comment 
     
     for comment in comment_blocks:
         try:
             # Comment text is usually the first navigation element
-            text = comment.get_text(strip=True)
+            dirty_text = comment.get_text(strip=True)
+            text = pattern.sub("", dirty_text)
             
             # User info
             user_link = comment.find('a', target='_self')
@@ -133,7 +137,7 @@ def scrape_main_feed_metafilter(tag='politics', pages=1):
             all_posts.extend(posts)
             all_skipped.extend(skipped)
             
-            time.sleep(random.uniform(1, 3))
+            sleep_politely()
         except Exception as e:
             print(f"Error on feed page {p}: {e}")
             
@@ -143,37 +147,85 @@ def scrape_main_feed_metafilter(tag='politics', pages=1):
     return pd.DataFrame(all_posts)
 
 def scrape_all_comments_metafilter(main_df):
-    """Iterates through thread links in a DataFrame to scrape all comments."""
+    """Iterates through thread links in a DataFrame to scrape all comments.
+
+    Also extracts post_full_text and outside_links for each thread and adds
+    them to the main_df.
+    """
     all_comments = []
-    
+    post_full_texts = []
+    outside_links_list = []
+
     for idx, row in main_df.iterrows():
         try:
             url = row['thread_link']
-            print(f"Scraping thread: {row['title'][:30]}...")
-            
-            soup = get_soup_metafilter(url)
-            comments = parse_comments_metafilter(soup, url)
+            if idx % 5 == 0:
+                print(f"On row {idx} of {len(main_df)}")
+
+            # Get soup for thread page
+            post_soup = get_soup_metafilter(url)
+
+            # Extract main post content and outside links
+            copy_div = post_soup.find('div', class_='copy')
+            if copy_div:
+                post_full_text = copy_div.get_text(strip=True)
+                outside_links = [link['href'] for link in copy_div.find_all('a')]
+            else:
+                post_full_text = ""
+                outside_links = []
+
+            post_full_texts.append(post_full_text)
+            outside_links_list.append(outside_links)
+
+            # Parse comments using the same soup
+            comments = parse_comments_metafilter(post_soup, url)
             all_comments.extend(comments)
-            
-            sleep_politely()
+
+            time.sleep(random.uniform(1, 3))
         except Exception as e:
             print(f"Error scraping thread {url}: {e}")
-            
+            post_full_texts.append("")
+            outside_links_list.append([])
+
+    # Add new columns to main_df
+    main_df['post_full_text'] = post_full_texts
+    main_df['outside_links'] = outside_links_list
+
     return pd.DataFrame(all_comments)
+
+def scrape_metafilter(tag='politics', pages=1):
+    """Scrapes MetaFilter feed and comments, returning both DataFrames.
+
+    This is the main entry point that combines feed scraping and comment scraping.
+    It also extracts post_full_text and outside_links for each thread.
+
+    Args:
+        tag: The MetaFilter tag to scrape (default: 'politics')
+        pages: Number of feed pages to scrape (default: 1)
+
+    Returns:
+        tuple: (main_df, comments_df)
+            - main_df: DataFrame with post metadata, post_full_text, and outside_links
+            - comments_df: DataFrame with all comments from the scraped threads
+    """
+    # 1. Scrape the main feed
+    main_df = scrape_main_feed_metafilter(tag=tag, pages=pages)
+
+    # 2. Scrape comments and extract post content (modifies main_df in place)
+    comments_df = scrape_all_comments_metafilter(main_df)
+
+    return main_df, comments_df
+
 
 # --- WORKFLOW ---
 
 if __name__ == "__main__":
-    # 1. Scrape the main feed for politics
-    df_main = scrape_main_feed_metafilter(tag='politics', pages=2)
-    
-    # 2. Scrape the comments for every post found
-    df_comments = scrape_all_comments_metafilter(df_main)
-    
-    # 3. Merge them if you want a master sentiment dataset
-    # We merge on 'thread_link' to associate comments with their parent post data
+    # Scrape MetaFilter for politics posts
+    df_main, df_comments = scrape_metafilter(tag='politics', pages=2)
+
+    # Optionally merge for a master sentiment dataset
     final_df = pd.merge(df_comments, df_main, on='thread_link', how='left')
-    
+
     print("\nScraping Complete!")
     print(f"Total Posts: {len(df_main)}")
     print(f"Total Comments: {len(df_comments)}")
