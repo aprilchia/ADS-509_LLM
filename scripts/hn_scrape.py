@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import requests
 import pandas as pd
-from utils.sleepy import sleep_politely
+from sleepy import sleep_politely
 from bs4 import BeautifulSoup
 from typing import Dict, Any, List
 
@@ -9,7 +9,7 @@ base_url = "http://hn.algolia.com/api/v1/search_by_date?"
 HEADERS = {"User-Agent": "MADS-LLM-2025-student-Taylor/1.0 (tkirk@sandiego.edu)"}
 root = "https://news.ycombinator.com/"
 
-def define_parameters(page: int=0, tags: str='story', query: str='politics', per_page: int=50, comment_filter: str=">10", date_string: str="2025-06-01"):
+def define_parameters(page: int=0, tags: str='story', query: str='politics', per_page: int=5, comment_filter: str=">10", date_string: str="2025-06-01"):
     
     dt = datetime.strptime(date_string, "%Y-%m-%d")
     timestamp = int(dt.astimezone(timezone.utc).timestamp())
@@ -54,7 +54,7 @@ def parse_comments_from_html(html, story_id):
         comment_id = tr['id']
         user = tr.find("a", class_='hnuser').text # type: ignore
         time_text = tr.find("span", class_='age')['title'] # type: ignore
-        comment_text = tr.find('div', class_='comment').get_text(strip=True) # type: ignore
+        comment_text = tr.find('div', class_='comment').get_text(separator=" ", strip=True) # type: ignore
         if comment_text:
             rows.append({
                 'story_id': story_id,
@@ -67,9 +67,9 @@ def parse_comments_from_html(html, story_id):
     return rows
 
 
-def main(pages: int):
+def main(pages: int, per_page: int):
 
-    params = define_parameters()
+    params = define_parameters(per_page=per_page)
     hits = hn_pull_posts(pages=pages, params=params)
     df = make_posts_df(hits=hits)
 

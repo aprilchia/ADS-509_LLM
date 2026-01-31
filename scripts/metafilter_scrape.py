@@ -28,7 +28,7 @@ def parse_main_page_metafilter(soup):
     for idx, post in enumerate(post_summaries):
         try:
             # Get title and thread_link from h2 elements
-            post_title = posts[idx].get_text(strip=True)
+            post_title = posts[idx].get_text(separator=" ", strip=True)
             thread_link = posts[idx].find('a')['href']
 
             # Get external link from the post summary (first link)
@@ -73,7 +73,7 @@ def parse_comments_metafilter(post_soup, thread_url):
     for comment in comment_blocks:
         try:
             # Comment text is usually the first navigation element
-            dirty_text = comment.get_text(strip=True)
+            dirty_text = comment.get_text(separator=" ", strip=True)
             text = pattern.sub("", dirty_text)
             
             # User info
@@ -168,7 +168,7 @@ def scrape_all_comments_metafilter(main_df):
             # Extract main post content and outside links
             copy_div = post_soup.find('div', class_='copy')
             if copy_div:
-                post_full_text = copy_div.get_text(strip=True)
+                post_full_text = copy_div.get_text(separator=" ", strip=True)
                 outside_links = [link['href'] for link in copy_div.find_all('a')]
             else:
                 post_full_text = ""
