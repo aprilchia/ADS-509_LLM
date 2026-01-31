@@ -1,3 +1,6 @@
+# Commented out 'favorites' and 'fav' sections.  Metafilter has that info, Hacker news does not
+# Commented out comment_count, need to create method to calculate that for the other sources first
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -40,10 +43,9 @@ sns.set_theme(style="whitegrid", palette="muted", font_scale=1.1)
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-REQUIRED_MAIN_COLS = {"title", "thread_link", "op_user", "date", "comment_count"}
+REQUIRED_MAIN_COLS = {"title", "thread_link", "op_user", "created_at"} # "comment_count"}
 REQUIRED_COMMENT_COLS = {
-    "thread_link", "username", "comment_text", "timestamp", "date", "favorites"
-}
+    "thread_link", "username", "comment_text", "datetime_obj"} # "favorites"}
 
 POS_GROUPS = {
     "adj":          {"JJ", "JJR", "JJS"},
@@ -233,8 +235,8 @@ def analyze_descriptive_stats(report: EDAReport, show_plots: bool = True,
     comments = report.comments_enriched
 
     # Parse favorites
-    if "favorites_int" not in comments.columns:
-        comments["favorites_int"] = comments["favorites"].apply(_parse_favorites)
+    # if "favorites_int" not in comments.columns:
+    #     comments["favorites_int"] = comments["favorites"].apply(_parse_favorites)
 
     # Basic counts
     post_count = len(main)
@@ -244,12 +246,12 @@ def analyze_descriptive_stats(report: EDAReport, show_plots: bool = True,
 
     # Date range from main
     try:
-        dates = pd.to_datetime(main["date"])
+        dates = pd.to_datetime(main["created_at"])
         date_start = dates.min().strftime("%Y-%m-%d")
         date_end = dates.max().strftime("%Y-%m-%d")
     except Exception:
-        date_start = main["date"].min()
-        date_end = main["date"].max()
+        date_start = main["created_at"].min()
+        date_end = main["created_at"].max()
 
     summary_data = {
         "Posts": post_count,
@@ -270,11 +272,11 @@ def analyze_descriptive_stats(report: EDAReport, show_plots: bool = True,
     )
 
     # Favorites summary
-    fav = comments["favorites_int"]
-    _display_df(
-        pd.DataFrame(fav.describe()).rename(columns={"favorites_int": "Favorites"}),
-        "Favorites Distribution",
-    )
+    # fav = comments["favorites_int"]
+    # _display_df(
+    #     pd.DataFrame(fav.describe()).rename(columns={"favorites_int": "Favorites"}),
+    #     "Favorites Distribution",
+    # )
 
     # ---- Missing values heatmaps ----
     _sub_header("Missing Values")
@@ -312,8 +314,8 @@ def analyze_descriptive_stats(report: EDAReport, show_plots: bool = True,
         "date_range_end": str(date_end),
         "comments_per_post_mean": float(cpt.mean()),
         "comments_per_post_median": float(cpt.median()),
-        "avg_favorites": float(fav.mean()),
-        "median_favorites": float(fav.median()),
+        #"avg_favorites": float(fav.mean()),
+        #"median_favorites": float(fav.median()),
     }
 
 
@@ -623,49 +625,22 @@ def analyze_temporal_patterns(report: EDAReport, show_plots: bool = True,
     main = report.main_enriched
     comments = report.comments_enriched
 
-    # Parse main dates to get year context
-    try:
-        main_dates = pd.to_datetime(main["date"])
-    except Exception:
-        display(HTML('<p style="color:orange;">Could not parse main df dates. '
+    # Use datetime_obj column directly
+    if "datetime_obj" not in comments.columns:
+        display(HTML('<p style="color:orange;">No datetime_obj column found. '
                      'Skipping temporal analysis.</p>'))
         return
 
-    # Build thread_link -> year mapping
-    thread_years = (
-        main.assign(_parsed_date=main_dates)
-        .set_index("thread_link")["_parsed_date"]
-        .dt.year.to_dict()
-    )
+    # Ensure datetime_obj is datetime type
+    comments["datetime_obj"] = pd.to_datetime(comments["datetime_obj"])
 
-    # Parse comment dates: "January 14" + year from thread
-    def _parse_comment_datetime(row):
-        year = thread_years.get(row["thread_link"])
-        if year is None:
-            return pd.NaT
-        try:
-            date_str = f"{row['date']} {year}"
-            parsed = pd.to_datetime(date_str, format="%B %d %Y")
-        except Exception:
-            return pd.NaT
-        # Combine with timestamp if available
-        try:
-            time = pd.to_datetime(row["timestamp"], format="%I:%M %p")
-            parsed = parsed.replace(hour=time.hour, minute=time.minute)
-        except Exception:
-            pass
-        return parsed
-
-    if "parsed_datetime" not in comments.columns:
-        comments["parsed_datetime"] = comments.apply(_parse_comment_datetime, axis=1)
-
-    valid = comments.dropna(subset=["parsed_datetime"])
+    valid = comments.dropna(subset=["datetime_obj"])
     if len(valid) == 0:
-        display(HTML('<p style="color:orange;">No valid datetimes parsed. '
+        display(HTML('<p style="color:orange;">No valid datetimes found. '
                      'Skipping temporal visualizations.</p>'))
         return
 
-    valid_dt = valid["parsed_datetime"]
+    valid_dt = valid["datetime_obj"]
 
     # Day of week
     dow = valid_dt.dt.day_name()
@@ -761,7 +736,7 @@ def analyze_thread_structure(report: EDAReport, show_plots: bool = True,
     top_threads = thread_stats.nlargest(10, "n_comments").merge(
         main[["thread_link", "title"]], on="thread_link", how="left"
     )
-    top_threads["title_short"] = top_threads["title"].str[:60]
+    top_threads["title_short"] = top_threads["title"].fillna("(No Title)").str[:60]
 
     fig, axes = plt.subplots(1, 2, figsize=(16, 5))
 
