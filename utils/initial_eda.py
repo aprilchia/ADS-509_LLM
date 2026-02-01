@@ -1,10 +1,12 @@
-# Commented out 'favorites' and 'fav' sections.  Metafilter has that info, Hacker news does not
+
 # Commented out comment_count, need to create method to calculate that for the other sources first
+# Have day of week created in here
+
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
+import seaborn as sns # type: ignore
 import textstat  # type: ignore
 import re
 import os
@@ -43,9 +45,8 @@ sns.set_theme(style="whitegrid", palette="muted", font_scale=1.1)
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-REQUIRED_MAIN_COLS = {"title", "thread_link", "op_user", "created_at"} # "comment_count"}
-REQUIRED_COMMENT_COLS = {
-    "thread_link", "username", "comment_text", "datetime_obj"} # "favorites"}
+REQUIRED_MAIN_COLS = {"post_title", "post_id", "post_author", "created_at"} # "comment_count"}
+REQUIRED_COMMENT_COLS = {"post_id", "username", "comment_text", "created_at"}
 
 POS_GROUPS = {
     "adj":          {"JJ", "JJR", "JJS"},
@@ -81,7 +82,7 @@ class EDAReport:
     temporal_patterns: Dict[str, Any] = field(default_factory=dict)
     thread_structure: Dict[str, Any] = field(default_factory=dict)
     pos_distribution: Dict[str, Any] = field(default_factory=dict)
-    figures: List[Tuple[str, plt.Figure]] = field(default_factory=list)
+    figures: List[Tuple[str, plt.Figure]] = field(default_factory=list) # type: ignore
 
     def to_log_dict(self) -> Dict[str, Any]:
         """Merge all section dicts into one flat dict for JSON logging.
@@ -150,13 +151,13 @@ def _display_df(df: pd.DataFrame, caption: str = ""):
     display(df)
 
 
-def _display_metric(label: str, value):
+def _display_metric(label: str, value: Any) -> None:
     display(HTML(
         f'<p style="margin:2px 0;"><strong>{label}:</strong> {value}</p>'
     ))
 
 
-def _display_figure(fig: plt.Figure, report: EDAReport, label: str,
+def _display_figure(fig: plt.Figure, report: EDAReport, label: str, # type: ignore
                     save_dir: Optional[str] = None, show: bool = True):
     report.figures.append((label, fig))
     if save_dir:
@@ -174,7 +175,7 @@ def _display_figure(fig: plt.Figure, report: EDAReport, label: str,
 # ---------------------------------------------------------------------------
 # Helper: batched text statistics
 # ---------------------------------------------------------------------------
-def _compute_text_stats(text: str) -> dict:
+def _compute_text_stats(text: str) -> Dict[str, Any]:
     if not text or not str(text).strip():
         return {
             "char_length": 0, "word_count": 0, "sentence_count": 0,
@@ -215,16 +216,6 @@ def _ensure_text_stats(report: EDAReport):
 
 
 # ---------------------------------------------------------------------------
-# Helper: favorites parsing
-# ---------------------------------------------------------------------------
-def _parse_favorites(val) -> int:
-    if pd.isna(val) or val == "":
-        return 0
-    match = re.search(r"(\d+)", str(val))
-    return int(match.group(1)) if match else 0
-
-
-# ---------------------------------------------------------------------------
 # 1. Descriptive Statistics
 # ---------------------------------------------------------------------------
 def analyze_descriptive_stats(report: EDAReport, show_plots: bool = True,
@@ -234,14 +225,10 @@ def analyze_descriptive_stats(report: EDAReport, show_plots: bool = True,
     main = report.main_enriched
     comments = report.comments_enriched
 
-    # Parse favorites
-    # if "favorites_int" not in comments.columns:
-    #     comments["favorites_int"] = comments["favorites"].apply(_parse_favorites)
-
     # Basic counts
     post_count = len(main)
     comment_count = len(comments)
-    unique_posters = main["op_user"].nunique()
+    unique_posters = main["post_author"].nunique()
     unique_commenters = comments["username"].nunique()
 
     # Date range from main
@@ -264,19 +251,12 @@ def analyze_descriptive_stats(report: EDAReport, show_plots: bool = True,
     _display_df(summary_df, "Overview")
 
     # Comments per post
-    cpt = comments.groupby("thread_link").size()
+    cpt = comments.groupby("post_id").size()
     cpt_stats = cpt.describe()
     _display_df(
         pd.DataFrame(cpt_stats).rename(columns={0: "Comments Per Post"}),
         "Comments Per Post Distribution",
     )
-
-    # Favorites summary
-    # fav = comments["favorites_int"]
-    # _display_df(
-    #     pd.DataFrame(fav.describe()).rename(columns={"favorites_int": "Favorites"}),
-    #     "Favorites Distribution",
-    # )
 
     # ---- Missing values heatmaps ----
     _sub_header("Missing Values")
@@ -297,7 +277,7 @@ def analyze_descriptive_stats(report: EDAReport, show_plots: bool = True,
 
     # ---- Comments per post histogram ----
     fig, ax = plt.subplots(figsize=(10, 4))
-    sns.histplot(cpt, bins=40, kde=True, edgecolor="black", ax=ax)
+    sns.histplot(cpt, bins=40, kde=True, edgecolor="black", ax=ax) # type: ignore
     ax.set_title("Comments Per Post Distribution")
     ax.set_xlabel("Number of Comments")
     ax.set_ylabel("Count")
@@ -347,7 +327,7 @@ def analyze_text_characteristics(report: EDAReport, show_plots: bool = True,
     for idx, (col, label) in enumerate(zip(text_cols, labels)):
         ax = axes.flat[idx]
         data = comments[col].dropna()
-        sns.histplot(data, bins=50, kde=True, edgecolor="black", ax=ax)
+        sns.histplot(data, bins=50, kde=True, edgecolor="black", ax=ax) # type: ignore
         ax.set_xlabel(label)
         ax.set_ylabel("")
     fig.suptitle("Text Characteristics Distributions", fontsize=14, y=1.02)
@@ -408,7 +388,7 @@ def analyze_readability(report: EDAReport, show_plots: bool = True,
     for idx, (col, label) in enumerate(zip(read_cols, labels)):
         ax = axes.flat[idx]
         data = comments[col].dropna()
-        sns.histplot(data, bins=50, kde=True, edgecolor="black", ax=ax)
+        sns.histplot(data, bins=50, kde=True, edgecolor="black", ax=ax) # type: ignore
         ax.set_xlabel(label)
         ax.set_ylabel("")
     fig.suptitle("Readability Score Distributions", fontsize=14, y=1.02)
@@ -426,7 +406,7 @@ def analyze_readability(report: EDAReport, show_plots: bool = True,
 # ---------------------------------------------------------------------------
 # 4. Feature Presence
 # ---------------------------------------------------------------------------
-def _compute_feature_presence(text: str) -> dict:
+def _compute_feature_presence(text: str) -> Dict[str, Any]:
     if not text or not str(text).strip():
         return {
             "has_mention": False, "mention_count": 0,
@@ -485,7 +465,6 @@ def analyze_feature_presence(report: EDAReport, show_plots: bool = True,
     count_cols = ["mention_count", "url_count", "hashtag_count", "emoji_count"]
 
     pcts = [comments[c].sum() / n * 100 for c in has_cols]
-    avgs = [comments[c].mean() for c in count_cols]
 
     summary_df = pd.DataFrame({
         "Feature": feature_names,
@@ -570,7 +549,7 @@ def analyze_sentiment(report: EDAReport, show_plots: bool = True,
 
     # Compound histogram
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-    sns.histplot(compound, bins=50, kde=True, edgecolor="black", ax=axes[0])
+    sns.histplot(compound, bins=50, kde=True, edgecolor="black", ax=axes[0]) # type: ignore
     axes[0].axvline(0.05, color="green", linestyle="--", alpha=0.7, label="Positive threshold")
     axes[0].axvline(-0.05, color="red", linestyle="--", alpha=0.7, label="Negative threshold")
     axes[0].set_title("VADER Compound Score Distribution")
@@ -579,7 +558,7 @@ def analyze_sentiment(report: EDAReport, show_plots: bool = True,
 
     # Label distribution bar chart
     colors_map = {"positive": "#2ecc71", "neutral": "#95a5a6", "negative": "#e74c3c"}
-    bar_colors = [colors_map.get(l, "#95a5a6") for l in label_counts.index]
+    bar_colors = [colors_map.get(lbl, "#95a5a6") for lbl in label_counts.index]
     axes[1].bar(label_counts.index, label_counts.values, color=bar_colors, edgecolor="black")
     axes[1].set_title("Sentiment Label Distribution")
     axes[1].set_ylabel("Count")
@@ -622,37 +601,39 @@ def analyze_temporal_patterns(report: EDAReport, show_plots: bool = True,
                               save_dir: Optional[str] = None):
     _section_header(f"6. Temporal Patterns  ({report.source})")
 
-    main = report.main_enriched
     comments = report.comments_enriched
 
-    # Use datetime_obj column directly
-    if "datetime_obj" not in comments.columns:
-        display(HTML('<p style="color:orange;">No datetime_obj column found. '
+    # Use created_at column directly
+    if "created_at" not in comments.columns:
+        display(HTML('<p style="color:orange;">No created_at column found. '
                      'Skipping temporal analysis.</p>'))
         return
 
-    # Ensure datetime_obj is datetime type
-    comments["datetime_obj"] = pd.to_datetime(comments["datetime_obj"])
+    # Ensure created_at is datetime type
+    comments["created_at"] = pd.to_datetime(comments["created_at"])
 
-    valid = comments.dropna(subset=["datetime_obj"])
+    # Add day_of_week column to comments_enriched
+    comments["day_of_week"] = comments["created_at"].dt.day_name() # type: ignore
+
+    valid = comments.dropna(subset=["created_at"])
     if len(valid) == 0:
         display(HTML('<p style="color:orange;">No valid datetimes found. '
                      'Skipping temporal visualizations.</p>'))
         return
 
-    valid_dt = valid["datetime_obj"]
+    valid_dt = valid["created_at"]
 
     # Day of week
-    dow = valid_dt.dt.day_name()
+    dow = valid_dt.dt.day_name() # type: ignore
     dow_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
                  "Saturday", "Sunday"]
     dow_counts = dow.value_counts().reindex(dow_order, fill_value=0)
 
     # Hour of day
-    hour_counts = valid_dt.dt.hour.value_counts().sort_index()
+    hour_counts = valid_dt.dt.hour.value_counts().sort_index() # type: ignore
 
     # Volume over time (by date)
-    date_counts = valid_dt.dt.date.value_counts().sort_index()
+    date_counts = valid_dt.dt.date.value_counts().sort_index() # type: ignore
 
     # Most active
     most_active_day = dow_counts.idxmax() if len(dow_counts) > 0 else "N/A"
@@ -711,16 +692,26 @@ def analyze_thread_structure(report: EDAReport, show_plots: bool = True,
     comments = report.comments_enriched
 
     # Comments per thread
-    cpt = comments.groupby("thread_link").size().reset_index(name="n_comments")
+    cpt = comments.groupby("post_id").size().reset_index(name="n_comments")
+
+    # Add comment_count to main_enriched
+    report.main_enriched = report.main_enriched.merge(
+        cpt.rename(columns={"n_comments": "comment_count"}),
+        on="post_id",
+        how="left",
+    )
+    report.main_enriched["comment_count"] = (
+        report.main_enriched["comment_count"].fillna(0).astype(int)
+    )
 
     # Unique commenters per thread
     uct = (
-        comments.groupby("thread_link")["username"]
+        comments.groupby("post_id")["username"]
         .nunique()
         .reset_index(name="unique_commenters")
     )
 
-    thread_stats = cpt.merge(uct, on="thread_link")
+    thread_stats = cpt.merge(uct, on="post_id")
     thread_stats["comment_commenter_ratio"] = (
         thread_stats["n_comments"] / thread_stats["unique_commenters"]
     )
@@ -734,14 +725,14 @@ def analyze_thread_structure(report: EDAReport, show_plots: bool = True,
 
     # Top 10 threads
     top_threads = thread_stats.nlargest(10, "n_comments").merge(
-        main[["thread_link", "title"]], on="thread_link", how="left"
+        main[["post_id", "post_title"]], on="post_id", how="left"
     )
-    top_threads["title_short"] = top_threads["title"].fillna("(No Title)").str[:60]
+    top_threads["title_short"] = top_threads["post_title"].fillna("(No Title)").str[:60]
 
     fig, axes = plt.subplots(1, 2, figsize=(16, 5))
 
     # Comments per thread histogram
-    sns.histplot(thread_stats["n_comments"], bins=40, kde=True, edgecolor="black",
+    sns.histplot(thread_stats["n_comments"], bins=40, kde=True, edgecolor="black", # type: ignore
                  ax=axes[0])
     axes[0].set_title("Comments Per Thread Distribution")
     axes[0].set_xlabel("Number of Comments")
@@ -774,7 +765,7 @@ def analyze_thread_structure(report: EDAReport, show_plots: bool = True,
 # ---------------------------------------------------------------------------
 # 8. POS Tag Distributions
 # ---------------------------------------------------------------------------
-def _compute_pos_ratios(text: str) -> dict:
+def _compute_pos_ratios(text: str) -> Dict[str, Any]:
     nan_result = {f"{group}_ratio": np.nan for group in POS_GROUPS}
     if not text or not str(text).strip():
         return nan_result
@@ -861,7 +852,7 @@ def initial_eda(
     main: pd.DataFrame,
     comments: pd.DataFrame,
     source: str,
-    sections: Optional[list] = None,
+    sections: Optional[List[str]] = None,
     show_plots: bool = True,
     save_plots: Optional[str] = None,
 ) -> EDAReport:
