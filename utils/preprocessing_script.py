@@ -14,6 +14,7 @@ def preprocess_text(text, full=False):
     text = str(text).lower()
     text = re.sub(r'<.*?>', '', text)  # Remove HTML
     text = re.sub(r'http\S+', '[URL]', text)  # Replace URLs
+    text = re.sub(r'reply$', "", text) # Remove 'reply' tag from hacker news comments
     
     # 2. Handle Emojis (Convert to text descriptions)
     text = emoji.demojize(text, delimiters=(" ", " "))
