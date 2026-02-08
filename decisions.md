@@ -16,6 +16,11 @@
 - date comment posted -> `created_at`
 - text of comment itself `comment_text`
 
+## EDA
+
+- In main notebook, include summary/basic stats for each source, then 1-2 interesting visuals
+- Keep full EDA for each in separate appendix
+
 ## Fine-Tuning Labels
 
 - Randomly sample 100 comments from all sources to independently label
