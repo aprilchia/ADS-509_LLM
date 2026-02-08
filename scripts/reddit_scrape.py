@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime as dt
 from IPython.display import display, HTML
+from textblob import TextBlob
 
 ## Setup
 
@@ -183,7 +184,9 @@ reddit_main = posts_df.copy()
 
 # Convert UTC to readable date string
 reddit_main = reddit_main.rename(columns={
-    "author": "op_user",
+    "id": "post_id",
+    "title": "post_title",
+    "author": "post_author",
     "created_utc": "created_at",
 })
 
@@ -193,7 +196,7 @@ reddit_main["created_at"] = pd.to_datetime(
 
 # Keep only required columns
 reddit_main = reddit_main[
-    ["title", "thread_link", "op_user", "created_at",]
+    ["post_id", "post_title", "post_author", "created_at"]
 ]
 
 # Reddit → EDA comments dataframe
@@ -201,18 +204,13 @@ reddit_comments = comments_df.copy()
 
 reddit_comments = reddit_comments.rename(columns={
     "author": "username",
-    "created_utc": "datetime_obj",
+    "created_utc": "created_at"
 })
 
 # Convert to datetime
-reddit_comments["datetime_obj"] = pd.to_datetime(
-    reddit_comments["datetime_obj"], unit="s", errors="coerce"
+reddit_comments["created_at"] = pd.to_datetime(
+    reddit_comments["created_at"], unit="s", errors="coerce"
 )
 
 # Keep required columns
-reddit_comments = reddit_comments[[
-    "thread_link",
-    "username",
-    "comment_text",
-    "datetime_obj",
-]]
+reddit_comments = reddit_comments[["post_id", "username", "comment_text", "created_at"]]
