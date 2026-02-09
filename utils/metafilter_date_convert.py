@@ -13,7 +13,7 @@ def convert(main_df, comments_df):
         comments_df: DataFrame with 'thread_link', 'timestamp', and 'date' columns
 
     Returns:
-        comments_df with new 'datetime_obj' column and original timestamp/date removed
+        comments_df with new 'created_at' column and original timestamp/date removed
     """
     # 1. Merge to get the post date from main_df
     comments_with_year = comments_df.merge(
@@ -39,17 +39,17 @@ def convert(main_df, comments_df):
     )
 
     # 5. Parse to datetime using mixed format to handle variations
-    comments_with_year['datetime_obj'] = pd.to_datetime(
+    comments_with_year['created_at'] = pd.to_datetime(
         comments_with_year['datetime_str'],
         format='mixed'
     )
 
     # 6. Fix year rollover: if comment datetime is BEFORE post date, it must be next year
-    rollover_mask = comments_with_year['datetime_obj'] < comments_with_year['post_date']
-    comments_with_year.loc[rollover_mask, 'datetime_obj'] += pd.DateOffset(years=1)
+    rollover_mask = comments_with_year['created_at'] < comments_with_year['post_date']
+    comments_with_year.loc[rollover_mask, 'created_at'] += pd.DateOffset(years=1)
 
     #7. Add day of week column
-    comments_with_year["day_of_week"] = comments_with_year['datetime_obj'].dt.day_name()
+    comments_with_year["day_of_week"] = comments_with_year['created_at'].dt.day_name()
 
     # 7. Clean up temporary columns
     comments_with_year.drop(
