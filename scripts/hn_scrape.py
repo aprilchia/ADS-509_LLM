@@ -76,7 +76,7 @@ def main(pages: int, per_page: int):
     all_comments = []
     skipped = {}
     for idx, sid in enumerate(df['story_id'].tolist()):
-        if idx%2==0:
+        if idx%10==0:
             print(f"{idx}/{len(df['story_id'])}")
         html = get_discussion_html(sid)
 

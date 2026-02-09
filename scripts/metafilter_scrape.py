@@ -159,7 +159,7 @@ def scrape_all_comments_metafilter(main_df):
     for idx, row in main_df.iterrows():
         try:
             url = row['thread_link']
-            if idx % 5 == 0:
+            if idx % 20 == 0:
                 print(f"On row {idx} of {len(main_df)}")
 
             # Get soup for thread page
