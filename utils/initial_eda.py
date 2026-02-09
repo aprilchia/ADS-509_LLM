@@ -17,6 +17,10 @@ from datetime import datetime as dt
 from IPython.display import display, HTML
 from textblob import TextBlob  # type: ignore
 
+# Tie path to root
+_MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+_DEFAULT_LOG_DIR = os.path.join(_MODULE_DIR, "..", "eda_logs")
+
 import nltk
 try:
     nltk.data.find('sentiment/vader_lexicon.zip')
@@ -929,7 +933,7 @@ def initial_eda(
 # ---------------------------------------------------------------------------
 # Logging & Persistence
 # ---------------------------------------------------------------------------
-def save_eda_report(report: EDAReport, output_dir: str = "eda_logs"):
+def save_eda_report(report: EDAReport, output_dir: str = _DEFAULT_LOG_DIR):
     """Persist EDA report artifacts to disk in a source-specific subfolder."""
     source_dir = os.path.join(output_dir, report.source)
     os.makedirs(source_dir, exist_ok=True)
@@ -961,7 +965,7 @@ def save_eda_report(report: EDAReport, output_dir: str = "eda_logs"):
     ))
 
 
-def compare_sources(log_dir: str = "eda_logs") -> pd.DataFrame:
+def compare_sources(log_dir: str = _DEFAULT_LOG_DIR) -> pd.DataFrame:
     """Load all saved EDA summaries and return a comparison DataFrame."""
     import glob as glob_mod
     files = glob_mod.glob(os.path.join(log_dir, "**", "*_summary.json"),
