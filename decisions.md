@@ -25,6 +25,7 @@
 
 - Randomly sample 100 comments from all sources to independently label
 - Compare then use LM to come up with the rest
+- Use 3 LM models to label the rest and compare results
 - Spot check 100 LLM labeled samples
 - Do another round if need be
 
@@ -40,7 +41,7 @@
 - Referring or linking other sources
 - Responding to other commenter questions with more information
 
-**Interrogative**
+**Inquisitive**
 - Asking questions meant for others to respond
 - Not rhetorical or clarifying questions
 
