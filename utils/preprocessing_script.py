@@ -1,6 +1,7 @@
 import re
 import emoji # type: ignore
 import nltk
+import html
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
@@ -14,6 +15,7 @@ def preprocess_text(text, full=False):
     text = str(text).lower()
     text = re.sub(r'<.*?>', '', text)  # Remove HTML
     text = re.sub(r'http\S+', '[URL]', text)  # Replace URLs
+    text = html.unescape(text) # Convert escaped characters back to original (&quot; -> ")
     
     # 2. Handle Emojis (Convert to text descriptions)
     text = emoji.demojize(text, delimiters=(" ", " "))
