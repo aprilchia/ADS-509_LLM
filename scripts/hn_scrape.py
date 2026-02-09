@@ -2,14 +2,12 @@ from datetime import datetime, timezone
 import requests
 import pandas as pd
 from utils.sleepy import sleep_politely
-from bs4 import BeautifulSoup
 from typing import Dict, Any, List
 
 base_url = "http://hn.algolia.com/api/v1/search_by_date?"
 HEADERS = {"User-Agent": "MADS-LLM-2025-student-Taylor/1.0 (tkirk@sandiego.edu)"}
-root = "https://news.ycombinator.com/"
 
-def define_parameters(page: int=0, tags: str='story', query: str='politics', per_page: int=5, comment_filter: str=">10", date_string: str="2025-06-01"):
+def define_parameters(page: int=0, tags: str='story', query: str='politics', per_page: int=5, comment_filter: str=">10", date_string: str="2025-07-09"):
     
     dt = datetime.strptime(date_string, "%Y-%m-%d")
     timestamp = int(dt.astimezone(timezone.utc).timestamp())
@@ -27,7 +25,9 @@ def hn_pull_posts(pages: int, params: Dict[str, Any]):
     for page in range(pages + 1):
         params['page'] = page
         r = requests.get(url=base_url, params=params, headers=HEADERS)
-        r.raise_for_status()
+        if not r.ok:
+            print(f"HTTP {r.status_code} on posts page {page} — returning {len(hits)} hits collected so far.")
+            break
         hits.extend(r.json()['hits'])
         sleep_politely()
     return hits
@@ -36,57 +36,40 @@ def make_posts_df(hits: List[Dict]):
     keep_cols = ['story_id', 'author', 'points', 'created_at', 'title', 'url']
     return pd.json_normalize(hits).loc[:, keep_cols].rename(columns={"title": "post_title", "url": "outside_url"})
 
-def get_discussion_html(story_id):
-    url = root + f"item?id={story_id}"
-    r = requests.get(url, headers=HEADERS)
-    r.raise_for_status()
-    html = r.text
-    sleep_politely(sleep_range = (30.0,31.0)) # Adjust sleep according to robots.txt
-    return html
+def comment_scrape_api(posts_df: pd.DataFrame):
+    """Scrape comments via the Algolia API for story_ids in an existing posts DataFrame."""
+    story_ids = posts_df['story_id'].tolist()
+    all_comments = []
+    for idx, story_id in enumerate(story_ids):
+        if idx % 5 == 0:
+            print(f"{idx}/{len(story_ids)}")
 
-# Simple HTML -> comments parser
-def parse_comments_from_html(html, story_id):
-    soup = BeautifulSoup(html, 'html.parser')
-    rows = []
-    table_row_list = soup.find_all("tr", class_='athing comtr')
-    for tr in table_row_list:
-        
-        comment_id = tr['id']
-        user = tr.find("a", class_='hnuser').text # type: ignore
-        time_text = tr.find("span", class_='age')['title'] # type: ignore
-        comment_text = tr.find('div', class_='comment').get_text(separator=" ", strip=True) # type: ignore
-        if comment_text:
-            rows.append({
-                'story_id': story_id,
-                'comment_id': comment_id,
-                'user': user,
-                'time_text': time_text,
-                'comment_text': comment_text,
+        url = f"https://hn.algolia.com/api/v1/search?tags=comment,story_{story_id}&hitsPerPage=300"
+        r = requests.get(url, headers=HEADERS)
+        if not r.ok:
+            print(f"HTTP {r.status_code} on story {story_id} — skipping.")
+            continue
+
+        hits = r.json()['hits']
+        for hit in hits:
+            all_comments.append({
+                'story_id': hit['story_id'],
+                'created_at': hit['created_at'],
+                'story_title': hit['story_title'],
+                'author': hit['author'],
+                'comment_text': hit['_highlightResult']['comment_text']['value'],
             })
 
-    return rows
+        sleep_politely(sleep_range=(1.0, 3.0))
+
+    comments_df = pd.DataFrame(all_comments)
+    print(f"Total comments scraped: {len(comments_df)}")
+    return comments_df
 
 
 def main(pages: int, per_page: int):
-
     params = define_parameters(per_page=per_page)
     hits = hn_pull_posts(pages=pages, params=params)
-    df = make_posts_df(hits=hits)
-
-    all_comments = []
-    skipped = {}
-    for idx, sid in enumerate(df['story_id'].tolist()):
-        if idx%10==0:
-            print(f"{idx}/{len(df['story_id'])}")
-        html = get_discussion_html(sid)
-
-        try:
-            all_comments.extend(parse_comments_from_html(html, sid))
-        except Exception as e:
-            skipped[sid] = html
-            print(f"Problem with sid {sid}")
-            print(f"Error: {e}")
-
-    comments_df = pd.DataFrame(all_comments)
-    print('Total comments scraped:', len(comments_df))
-    return df, comments_df
+    posts_df = make_posts_df(hits=hits)
+    comments_df = comment_scrape_api(posts_df)
+    return posts_df, comments_df
