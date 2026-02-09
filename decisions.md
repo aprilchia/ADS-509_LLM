@@ -40,7 +40,7 @@
 - Referring or linking other sources
 - Responding to other commenter questions with more information
 
-**Interrogative**
+**Inquisitive**
 - Asking questions meant for others to respond
 - Not rhetorical or clarifying questions
 
