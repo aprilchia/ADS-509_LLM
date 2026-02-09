@@ -698,7 +698,9 @@ def analyze_thread_structure(report: EDAReport, show_plots: bool = True,
     # Comments per thread
     cpt = comments.groupby("post_id").size().reset_index(name="n_comments")
 
-    # Add comment_count to main_enriched
+    # Add comment_count to main_enriched (drop existing column to avoid suffix conflict)
+    if "comment_count" in report.main_enriched.columns:
+        report.main_enriched = report.main_enriched.drop(columns=["comment_count"])
     report.main_enriched = report.main_enriched.merge(
         cpt.rename(columns={"n_comments": "comment_count"}),
         on="post_id",
