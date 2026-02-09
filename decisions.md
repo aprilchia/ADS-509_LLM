@@ -25,6 +25,7 @@
 
 - Randomly sample 100 comments from all sources to independently label
 - Compare then use LM to come up with the rest
+- Use 3 LM models to label the rest and compare results
 - Spot check 100 LLM labeled samples
 - Do another round if need be
 
