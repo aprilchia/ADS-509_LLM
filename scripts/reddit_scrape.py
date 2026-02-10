@@ -214,3 +214,7 @@ reddit_comments["created_at"] = pd.to_datetime(
 
 # Keep required columns
 reddit_comments = reddit_comments[["post_id", "username", "comment_text", "created_at"]]
+
+# Add source column
+reddit_main['source'] = 'reddit'
+reddit_comments['source'] = 'reddit'
