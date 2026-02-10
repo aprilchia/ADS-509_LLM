@@ -4,23 +4,7 @@ import time
 import random
 import requests
 import pandas as pd
-import seaborn as sns
-import numpy as np
-import matplotlib.pyplot as plt
-import re
-import string
-import textstat
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk.sentiment import SentimentIntensityAnalyzer
-from collections import Counter
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime as dt
-from IPython.display import display, HTML
-from textblob import TextBlob
 
 ## Setup
 
