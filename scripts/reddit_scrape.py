@@ -4,76 +4,62 @@ import time
 import random
 import requests
 import pandas as pd
+from utils.sleepy import sleep_politely
 from datetime import datetime as dt
 
 ## Setup
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(SCRIPT_DIR)
+
 HEADERS = {"User-Agent": "MADS-FinalProject/1.0 achia@sandiego.edu"}
 
-def sleep_politely(sleep_range = (1.0, 2.0)):
-    time.sleep(random.uniform(*sleep_range))
-
-DATA_DIR = 'Downloads/reddit'
+DATA_DIR = os.path.join(ROOT_DIR, 'Downloads', 'reddit')
 RAW_API_DIR = os.path.join(DATA_DIR, 'raw_api')
 RAW_HTML_DIR = os.path.join(DATA_DIR, 'raw_html')
 
-for d in [DATA_DIR, RAW_API_DIR, RAW_HTML_DIR]:
-    os.makedirs(d, exist_ok = True)
-  
 ## API Collect Posts
 
-# Fetch posts
-def fetch_reddit_posts(subreddit = 'politics', limit = 100):
+def fetch_reddit_posts(subreddit = 'politics', limit = 100, max_pages = 10):
+    """Fetch posts using Reddit's automated pagination.
+    limit: number of posts per page (max 100).
+    max_pages: number of pages to fetch (e.g. 10 pages * 100 limit = 1000 posts max)."""
     fp = os.path.join(RAW_API_DIR, f"{subreddit}_posts.json")
     if os.path.exists(fp):
         with open(fp, 'r', encoding = 'utf-8') as f:
             return json.load(f)
 
-# About the last 6 months+
-    url = f"https://www.reddit.com/r/{subreddit}/search.json"
+    url = f"https://www.reddit.com/r/{subreddit}/new.json" # changing from 'search' to 'new' removes the hard cap at 250 and increases to 1000
     params = {
         "q": "politics",
         "restrict_sr": 1,
-        "sort": "new",
+        # "sort": "new",
         "t": "year",
         "limit": limit
     }
 
-    r = requests.get(url, headers = HEADERS, params = params, timeout = 60)
-    r.raise_for_status()
-    data = r.json()
+    data_blocks = []
+
+    for page in range(max_pages):
+        r = requests.get(url, headers = HEADERS, params = params, timeout = 60)
+        r.raise_for_status()
+        data = r.json()
+        data_blocks.append(data)
+
+        after_id = data['data']['after'] # this then pulls from the next page since Reddit uses automated pagination (otherwise it caps at 100 per request)
+        if after_id:
+            params['after'] = after_id
+        else:
+            break # no more pages available
+
+        sleep_politely()
+
+    # Can further increase this by doing time slices, then checking for dups when merging or making the same request with different sort params
 
     with open(fp, "w", encoding = "utf-8") as f:
-        json.dump(data, f)
+        json.dump(data_blocks, f)
 
-    sleep_politely()
-    return data
-
-# Flatten post metadata
-raw_posts = fetch_reddit_posts(limit = 150)
-
-posts = []
-for child in raw_posts["data"]["children"]:
-    d = child["data"]
-    if d.get("num_comments", 0) < 10:
-        continue
-
-    posts.append({
-        "post_id": d["id"],
-        "title": d["title"],
-        "post_text": d.get("selftext", ""),
-        "author": d["author"],
-        "created_utc": d["created_utc"],
-        "score": d["score"],
-        "num_comments": d["num_comments"],
-        "thread_link": "https://old.reddit.com" + d["permalink"],
-        "url": "https://old.reddit.com" + d["permalink"],
-        "source": "reddit"
-    })
-
-posts_df = pd.DataFrame(posts)
-print("Posts collected:", len(posts_df))
-posts_df.head()
+    return data_blocks
 
 ## Fetch Comment Threads
 
@@ -92,7 +78,7 @@ def get_comments_json(post_id, url):
 
     sleep_politely(sleep_range = (2.0, 3.0))
     return data
-  
+
 ## Parse Comments
 
 def extract_comments(comment_tree, post_id, thread_link):
@@ -121,84 +107,101 @@ def extract_comments(comment_tree, post_id, thread_link):
     walk(comment_tree)
     return rows
 
-# Loop over posts
-all_comments = []
+## Collect and Build DataFrames
 
-for idx, row in posts_df.iterrows():
-    if idx % 5 == 0:
-        print(f"{idx}/{len(posts_df)}")
+def collect_reddit_data(subreddit = 'politics', limit = 100, min_comments = 10):
+    """Unifies fetch, comment retrieval, and parsing.
+    Returns reddit_main and reddit_comments DataFrames ready for EDA."""
 
-    try:
-        data = get_comments_json(row["post_id"], row["thread_link"])
-        comments = data[1]["data"]["children"]
-        all_comments.extend(
-            extract_comments(comments, row["post_id"], row["thread_link"])
-        )
-    except Exception:
-        continue
+    # Ensure output directories exist
+    for d in [DATA_DIR, RAW_API_DIR, RAW_HTML_DIR]:
+        os.makedirs(d, exist_ok = True)
 
-comments_df = pd.DataFrame(all_comments)
-print("Total comments collected:", len(comments_df))
-comments_df.head()
+    # Fetch posts with pagination
+    data_blocks = fetch_reddit_posts(subreddit = subreddit, limit = limit)
 
-## Combine Datasets
+    # Flatten post metadata
+    posts = []
+    for block in data_blocks:
+        for child in block["data"]["children"]:
+            d = child["data"]
+            if d.get("num_comments", 0) < min_comments:
+                continue
 
-merged_df = comments_df.merge(
-    posts_df,
-    on = "post_id",
-    how = "left",
-    suffixes=("_comment", "_post")
-)
+            posts.append({
+                "post_id": d["id"],
+                "title": d["title"],
+                "post_text": d.get("selftext", ""),
+                "author": d["author"],
+                "created_utc": d["created_utc"],
+                "score": d["score"],
+                "num_comments": d["num_comments"],
+                "thread_link": "https://old.reddit.com" + d["permalink"],
+                "url": "https://old.reddit.com" + d["permalink"],
+                "source": "reddit"
+            })
 
-merged_df["post_time"] = pd.to_datetime(
-    merged_df["created_utc_post"], unit = "s", errors = "coerce"
-)
-merged_df["comment_time"] = pd.to_datetime(
-    merged_df["created_utc_comment"], unit = "s", errors = "coerce"
-)
+    posts_df = pd.DataFrame(posts)
+    posts_df['created_utc'] = pd.to_datetime(posts_df['created_utc'], unit = 's')
+    print("Posts collected:", len(posts_df))
 
-print(posts_df.columns)
-print(comments_df.columns)
-print(merged_df.columns)
+    # Fetch and parse comments
+    all_comments = []
 
-## EDA Adapter
+    for idx, (_, row) in enumerate(posts_df.iterrows()):
+        if idx % 10 == 0:
+            print(f"Parsing {idx}/{len(posts_df)} posts")
 
-# Reddit → EDA main dataframe
-reddit_main = posts_df.copy()
+        try:
+            data = get_comments_json(row["post_id"], row["thread_link"])
+            comments = data[1]["data"]["children"]
+            all_comments.extend(
+                extract_comments(comments, row["post_id"], row["thread_link"])
+            )
+        except Exception:
+            continue
 
-# Convert UTC to readable date string
-reddit_main = reddit_main.rename(columns={
-    "id": "post_id",
-    "title": "post_title",
-    "author": "post_author",
-    "created_utc": "created_at",
-})
+    comments_df = pd.DataFrame(all_comments)
+    print("Total comments collected:", len(comments_df))
 
-reddit_main["created_at"] = pd.to_datetime(
-    reddit_main["created_at"], unit="s", errors="coerce"
-)
+    ## EDA Adapter
 
-# Keep only required columns
-reddit_main = reddit_main[
-    ["post_id", "post_title", "post_author", "created_at"]
-]
+    # Reddit → EDA main dataframe
+    reddit_main = posts_df.copy()
 
-# Reddit → EDA comments dataframe
-reddit_comments = comments_df.copy()
+    # Rename columns for EDA compatibility
+    reddit_main = reddit_main.rename(columns = {
+        "id": "post_id",
+        "title": "post_title",
+        "author": "post_author",
+        "created_utc": "created_at",
+    })
 
-reddit_comments = reddit_comments.rename(columns={
-    "author": "username",
-    "created_utc": "created_at"
-})
+    # Keep only required columns
+    reddit_main = reddit_main[
+        ["post_id", "post_title", "post_author", "created_at"]
+    ]
 
-# Convert to datetime
-reddit_comments["created_at"] = pd.to_datetime(
-    reddit_comments["created_at"], unit="s", errors="coerce"
-)
+    # Add source column
+    reddit_main['source'] = 'reddit'
 
-# Keep required columns
-reddit_comments = reddit_comments[["post_id", "username", "comment_text", "created_at"]]
+    # Reddit → EDA comments dataframe
+    reddit_comments = comments_df.copy()
 
-# Add source column
-reddit_main['source'] = 'reddit'
-reddit_comments['source'] = 'reddit'
+    reddit_comments = reddit_comments.rename(columns = {
+        "author": "username",
+        "created_utc": "created_at"
+    })
+
+    # Convert to datetime
+    reddit_comments["created_at"] = pd.to_datetime(
+        reddit_comments["created_at"], unit = "s", errors = "coerce"
+    )
+
+    # Keep required columns
+    reddit_comments = reddit_comments[["post_id", "username", "comment_text", "created_at"]]
+
+    # Add source column
+    reddit_comments['source'] = 'reddit'
+
+    return reddit_main, reddit_comments
