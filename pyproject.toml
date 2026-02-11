@@ -12,7 +12,9 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "bs4>=0.0.2",
+    "datasets>=4.5.0",
     "datetime>=6.0",
+    "emoji>=2.15.0",
     "matplotlib>=3.10.8",
     "pandas>=2.3.3",
     "regex>=2025.11.3",

@@ -1,5 +1,6 @@
 import pandas as pd
-from datasets import Dataset, DatasetDict
+from datasets import Dataset, DatasetDict, Features, ClassLabel, Value
+
 
 def train_prep(df: pd.DataFrame, test1: float=0.3, test2: float=0.5):
     # Label mapping
@@ -11,6 +12,15 @@ def train_prep(df: pd.DataFrame, test1: float=0.3, test2: float=0.5):
         "text": df['comment_text'].tolist(),
         "label": [label2id[source] for source in df['source']]
     })
+
+    labels = list(label2id.keys())
+    class_features = Features({
+        'text': Value('string'),
+        'label': ClassLabel(names=labels) # This creates the id2label mapping
+    })
+
+    # Cast your dataset to these features
+    dataset = dataset.cast(class_features)
 
     # Split dataset 3-ways and combine back into  one
     split_dataset = dataset.train_test_split(test_size=test1, seed=10)
