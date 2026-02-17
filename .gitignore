@@ -1,5 +1,6 @@
 # Taylor's ignored
 notes_to_self.txt
+native_optuna.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
