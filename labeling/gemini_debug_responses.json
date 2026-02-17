@@ -1,0 +1,8 @@
+[
+  {
+    "request_idx": 413,
+    "job_name": "batches/gzss7lkccrx40bpzul86sdiwjdwls4kuw21o",
+    "issue": "response.text is None/empty",
+    "response_obj": "sdk_http_response=None candidates=None create_time=None model_version='gemini-3-flash-preview' prompt_feedback=GenerateContentResponsePromptFeedback(\n  block_reason=<BlockedReason.PROHIBITED_CONTENT: 'PROHIBITED_CONTENT'>\n) response_id='EraPae_BCv7P_uMP3vOWoQs' usage_metadata=GenerateContentResponseUsageMetadata(\n  prompt_token_count=3941,\n  prompt_tokens_details=[\n    ModalityTokenCount(\n      modality=<MediaModality.TEXT: 'TEXT'>,\n      token_count=3941\n    ),\n  ],\n  total_token_count=3941\n) automatic_function_calling_history=None parsed=None"
+  }
+]
