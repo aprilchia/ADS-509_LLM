@@ -23,11 +23,12 @@
 
 ## Fine-Tuning Labels
 
-- Randomly sample 100 comments from all sources to independently label
-- Compare then use LM to come up with the rest
+- Randomly sample 100 comments from all sources to independently label and compare
+- Use language models to label the rest
+    - Used 10 true labels in the prompt as positive examples, and used 10 negative examples with correct label
 - Use 3 LM models to label the rest and compare results
 - Spot check 100 LLM labeled samples
-- Do another round if need be
+- Kept majority vote labels and set aside the rest
 
 ### Labels
 
@@ -58,3 +59,14 @@
 - Clarifying or rhetorical questions, meta-commentary, off-topic remarks
 - Comments that don't clearly fit the other four categories
 - Includes simple factual questions directed at other commenters
+
+# Preprocessing Steps
+
+## Fine-tuning models
+- Converting emoji's to written text to preserve the emotion conveyed
+- Converting web address to a URL token because that information could convey something about the nature of the comment
+
+## Traditional machine learning
+- Removing all punctuation except ! and ? because those convey meaning and change the nature of a comment
+- Removing stop words using the NLTK set
+- Lemmatizing text prior, useful for feature reduction in TF-IDF without losing meaning

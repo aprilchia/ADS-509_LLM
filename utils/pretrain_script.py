@@ -2,15 +2,15 @@ import pandas as pd
 from datasets import Dataset, DatasetDict, Features, ClassLabel, Value
 
 
-def train_prep(df: pd.DataFrame, test1: float=0.3, test2: float=0.5):
+def train_prep(df: pd.DataFrame, label_column: str, test1: float=0.3, test2: float=0.5):
     # Label mapping
-    label2id = {label: idx for idx, label in enumerate(df['source'].unique())}
+    label2id = {label: idx for idx, label in enumerate(df[label_column].unique())}
     id2label = {idx: label for label, idx in label2id.items()}
 
     # Prepare dataset
     dataset = Dataset.from_dict({
         "text": df['comment_text'].tolist(),
-        "label": [label2id[source] for source in df['source']]
+        "label": [label2id[label] for label in df[label_column]]
     })
 
     labels = list(label2id.keys())
