@@ -1,7 +1,5 @@
 import os
 import json
-import time
-import random
 import requests
 import pandas as pd
 from utils.sleepy import sleep_politely

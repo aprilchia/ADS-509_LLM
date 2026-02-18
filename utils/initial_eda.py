@@ -49,7 +49,7 @@ sns.set_theme(style="whitegrid", palette="muted", font_scale=1.1)
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-REQUIRED_MAIN_COLS = {"post_title", "post_id", "post_author", "created_at"} # "comment_count"}
+REQUIRED_MAIN_COLS = {"post_title", "post_id", "post_author", "created_at"}
 REQUIRED_COMMENT_COLS = {"post_id", "username", "comment_text", "created_at"}
 
 POS_GROUPS = {
