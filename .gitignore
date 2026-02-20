@@ -1,6 +1,9 @@
 # Taylor's ignored
 notes_to_self.txt
 native_optuna.py
+*labeling/gemini_na.csv
+*labeling/gemini_remaining_comments.csv
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
