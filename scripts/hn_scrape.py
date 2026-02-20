@@ -8,6 +8,25 @@ base_url = "http://hn.algolia.com/api/v1/search_by_date?"
 HEADERS = {"User-Agent": "MADS-LLM-2025-student-Taylor/1.0 (tkirk@sandiego.edu)"}
 
 def define_parameters(page: int=0, tags: str='story', query: str='politics', per_page: int=5, comment_filter: str=">10", date_string: str="2025-07-09"):
+    """Build a parameter dict for the Algolia HN search_by_date API.
+
+    Converts date_string to a Unix timestamp and combines it with a comment
+    count filter so only stories after that date and above the comment threshold
+    are returned.
+
+    Args:
+        page: Page number to fetch (0-indexed). Defaults to 0.
+        tags: Algolia tag filter (e.g., 'story', 'comment'). Defaults to 'story'.
+        query: Search keyword. Defaults to 'politics'.
+        per_page: Results per page (hitsPerPage). Defaults to 5.
+        comment_filter: Numeric filter string for num_comments (e.g., '>10').
+            Defaults to '>10'.
+        date_string: Earliest post date in 'YYYY-MM-DD' format. Defaults to
+            '2025-07-09'.
+
+    Returns:
+        dict: Parameters ready to pass to requests.get() for the Algolia API.
+    """
     
     dt = datetime.strptime(date_string, "%Y-%m-%d")
     timestamp = int(dt.astimezone(timezone.utc).timestamp())
@@ -21,6 +40,19 @@ def define_parameters(page: int=0, tags: str='story', query: str='politics', per
         }
 
 def hn_pull_posts(pages: int, params: Dict[str, Any]):
+    """Paginate through the Algolia search_by_date feed and collect story hits.
+
+    Iterates from page 0 through pages (inclusive), updating params['page'] on
+    each iteration. Stops early if any page returns a non-2xx response.
+    Calls sleep_politely() between pages to respect rate limits.
+
+    Args:
+        pages: Number of additional pages to fetch beyond page 0.
+        params: Algolia API parameter dict (see define_parameters).
+
+    Returns:
+        list[dict]: All story hit dicts collected across pages.
+    """
     hits = []
     for page in range(pages + 1):
         params['page'] = page
@@ -33,6 +65,18 @@ def hn_pull_posts(pages: int, params: Dict[str, Any]):
     return hits
 
 def make_posts_df(hits: List[Dict]):
+    """Convert a list of Algolia story hit dicts into a standardized DataFrame.
+
+    Keeps story_id, author, points, created_at, title, and url, then renames
+    title → post_title and url → outside_url to match the project schema.
+
+    Args:
+        hits: List of raw hit dicts returned by the Algolia API.
+
+    Returns:
+        pd.DataFrame: Columns: story_id, author, points, created_at,
+            post_title, outside_url.
+    """
     keep_cols = ['story_id', 'author', 'points', 'created_at', 'title', 'url']
     return pd.json_normalize(hits).loc[:, keep_cols].rename(columns={"title": "post_title", "url": "outside_url"})
 
@@ -68,6 +112,18 @@ def comment_scrape_api(posts_df: pd.DataFrame):
 
 
 def main(pages: int, per_page: int):
+    """Orchestrate the full Hacker News scraping pipeline.
+
+    Builds API parameters, paginates through story results, converts hits to a
+    DataFrame, then fetches all comments for those stories.
+
+    Args:
+        pages: Number of feed pages to retrieve (passed to hn_pull_posts).
+        per_page: Stories per page (hitsPerPage in the Algolia query).
+
+    Returns:
+        tuple: (posts_df, comments_df) as pandas DataFrames.
+    """
     params = define_parameters(per_page=per_page)
     hits = hn_pull_posts(pages=pages, params=params)
     posts_df = make_posts_df(hits=hits)

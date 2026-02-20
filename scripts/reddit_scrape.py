@@ -62,6 +62,20 @@ def fetch_reddit_posts(subreddit = 'politics', limit = 100, max_pages = 10):
 ## Fetch Comment Threads
 
 def get_comments_json(post_id, url):
+    """Fetch and cache the raw comment JSON tree for a single Reddit post.
+
+    Returns the cached file immediately if it already exists, avoiding a
+    redundant API call. Otherwise fetches '{url}.json' and writes the result
+    to RAW_HTML_DIR. Calls sleep_politely() after each network request.
+
+    Args:
+        post_id: Reddit post ID string used to name the cache file.
+        url: Full permalink URL to the post (without the .json extension).
+
+    Returns:
+        list: Raw Reddit API JSON response (a two-element list where index 1
+            contains the comment tree).
+    """
     fp = os.path.join(RAW_HTML_DIR, f"comments_{post_id}.json")
     if os.path.exists(fp):
         with open(fp, "r", encoding = "utf-8") as f:
@@ -80,6 +94,21 @@ def get_comments_json(post_id, url):
 ## Parse Comments
 
 def extract_comments(comment_tree, post_id, thread_link):
+    """Recursively walk a Reddit comment tree and extract comment rows.
+
+    Processes only top-level 't1' (comment) nodes and descends into nested
+    replies, collecting all comments regardless of depth.
+
+    Args:
+        comment_tree: List of Reddit API child dicts (from data['children']).
+        post_id: Reddit post ID to attach to each extracted row.
+        thread_link: Full permalink URL to include in each row.
+
+    Returns:
+        list[dict]: Each dict contains post_id, comment_id, thread_link,
+            author, created_utc (Unix timestamp), score, comment_text, and
+            source='reddit'.
+    """
     rows = []
 
     def walk(comments):

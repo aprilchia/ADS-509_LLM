@@ -11,6 +11,27 @@ nltk.download('wordnet', quiet=True)
 nltk.download('omw-1.4', quiet=True)
 
 def preprocess_text(text, full=False):
+    """Clean and normalize a comment or post text string.
+
+    Applies two levels of preprocessing depending on the target model type:
+
+    - Basic (full=False): Lowercases, strips HTML tags and entities, replaces
+      URLs with '[URL]', and converts emojis to text descriptions (e.g., 😀 →
+      "grinning face"). Suitable for transformer fine-tuning (BERT, RoBERTa)
+      where subword tokenization benefits from richer text.
+
+    - Full (full=True): Adds punctuation removal (except '?' and '!'),
+      stopword filtering, and WordNet lemmatization on top of basic cleaning.
+      Suitable for TF-IDF + traditional ML baselines.
+
+    Args:
+        text: Raw input string to preprocess.
+        full: If True, apply the extended traditional-ML preprocessing pipeline.
+            Defaults to False.
+
+    Returns:
+        str: Cleaned and normalized text with extra whitespace collapsed.
+    """
     # 1. Basic Cleaning (Good for BERT)
     text = str(text).lower()
     text = re.sub(r'<.*?>', '', text)  # Remove HTML

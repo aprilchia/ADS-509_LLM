@@ -112,6 +112,16 @@ class EDAReport:
 # Helper: progress-aware apply
 # ---------------------------------------------------------------------------
 def _apply(series: pd.Series, func, desc: str = "Processing"):  # type: ignore[type-arg]
+    """Apply a function to a Series, using tqdm progress bar if available.
+
+    Args:
+        series: The pandas Series to transform.
+        func: Callable applied element-wise.
+        desc: Label shown in the tqdm progress bar.
+
+    Returns:
+        pd.Series: Result of applying func to each element.
+    """
     if _HAS_TQDM:
         tqdm.pandas(desc=desc)  # type: ignore[possibly-undefined]
         return series.progress_apply(func)  # type: ignore[attr-defined]
@@ -122,6 +132,16 @@ def _apply(series: pd.Series, func, desc: str = "Processing"):  # type: ignore[t
 # Helper: column validation
 # ---------------------------------------------------------------------------
 def _validate_columns(main: pd.DataFrame, comments: pd.DataFrame):
+    """Raise ValueError if either DataFrame is missing required columns.
+
+    Args:
+        main: Posts DataFrame; must contain all columns in REQUIRED_MAIN_COLS.
+        comments: Comments DataFrame; must contain all columns in
+            REQUIRED_COMMENT_COLS.
+
+    Raises:
+        ValueError: Lists all missing columns from both DataFrames.
+    """
     missing_main = REQUIRED_MAIN_COLS - set(main.columns)
     missing_comments = REQUIRED_COMMENT_COLS - set(comments.columns)
     if missing_main or missing_comments:
@@ -137,6 +157,11 @@ def _validate_columns(main: pd.DataFrame, comments: pd.DataFrame):
 # Helper: display utilities
 # ---------------------------------------------------------------------------
 def _section_header(title: str):
+    """Render a styled HTML section header (h2) in a Jupyter notebook cell.
+
+    Args:
+        title: Text to display as the section heading.
+    """
     display(HTML(
         f'<h2 style="color:#2c3e50; border-bottom:2px solid #3498db; '
         f'padding-bottom:6px; margin-top:28px;">{title}</h2>'
@@ -144,18 +169,35 @@ def _section_header(title: str):
 
 
 def _sub_header(title: str):
+    """Render a styled HTML sub-header (h3) in a Jupyter notebook cell.
+
+    Args:
+        title: Text to display as the sub-heading.
+    """
     display(HTML(
         f'<h3 style="color:#34495e; margin-top:16px;">{title}</h3>'
     ))
 
 
 def _display_df(df: pd.DataFrame, caption: str = ""):
+    """Display a DataFrame in a Jupyter cell with an optional bold caption.
+
+    Args:
+        df: DataFrame to render.
+        caption: Optional label shown above the DataFrame in bold.
+    """
     if caption:
         display(HTML(f'<p style="font-weight:600; color:#34495e;">{caption}</p>'))
     display(df)
 
 
 def _display_metric(label: str, value: Any) -> None:
+    """Render a single key-value metric line as bold HTML in a Jupyter cell.
+
+    Args:
+        label: Metric name displayed in bold.
+        value: Metric value displayed inline after the label.
+    """
     display(HTML(
         f'<p style="margin:2px 0;"><strong>{label}:</strong> {value}</p>'
     ))
@@ -163,6 +205,17 @@ def _display_metric(label: str, value: Any) -> None:
 
 def _display_figure(fig: plt.Figure, report: EDAReport, label: str, # type: ignore
                     save_dir: Optional[str] = None, show: bool = True):
+    """Store a figure in the report, optionally save it to disk, and display it.
+
+    Args:
+        fig: Matplotlib Figure to handle.
+        report: EDAReport instance whose figures list will receive this figure.
+        label: Short identifier used in the filename (e.g., 'vader_sentiment').
+        save_dir: If provided, save the PNG to this directory with the pattern
+            '{source}_{label}.png'.
+        show: If True, call plt.show(); otherwise close the figure without
+            rendering it inline.
+    """
     report.figures.append((label, fig))
     if save_dir:
         os.makedirs(save_dir, exist_ok=True)
@@ -180,6 +233,20 @@ def _display_figure(fig: plt.Figure, report: EDAReport, label: str, # type: igno
 # Helper: batched text statistics
 # ---------------------------------------------------------------------------
 def _compute_text_stats(text: str) -> Dict[str, Any]:
+    """Compute a suite of text-level statistics for a single string.
+
+    Returns zero/NaN values for empty input. Intended for use with _apply()
+    on the comment_text column.
+
+    Args:
+        text: Raw comment string to analyze.
+
+    Returns:
+        dict with keys: char_length, word_count, sentence_count,
+        avg_word_length, syllable_count, lexicon_count, polysyllable_count,
+        monosyllable_count, flesch_reading_ease, dale_chall, grade_level,
+        gunning_fog.
+    """
     if not text or not str(text).strip():
         return {
             "char_length": 0, "word_count": 0, "sentence_count": 0,
@@ -224,6 +291,16 @@ def _ensure_text_stats(report: EDAReport):
 # ---------------------------------------------------------------------------
 def analyze_descriptive_stats(report: EDAReport, show_plots: bool = True,
                               save_dir: Optional[str] = None):
+    """Display basic counts, date range, comments-per-post stats, and missing value heatmaps.
+
+    Populates report.descriptive_stats with post/comment counts, unique author
+    counts, date range, and comments-per-post mean/median.
+
+    Args:
+        report: EDAReport instance with main_enriched and comments_enriched.
+        show_plots: If True, render plots inline. Defaults to True.
+        save_dir: Optional directory path to save figure PNGs.
+    """
     _section_header(f"1. Descriptive Statistics  ({report.source})")
 
     main = report.main_enriched
@@ -308,6 +385,17 @@ def analyze_descriptive_stats(report: EDAReport, show_plots: bool = True,
 # ---------------------------------------------------------------------------
 def analyze_text_characteristics(report: EDAReport, show_plots: bool = True,
                                  save_dir: Optional[str] = None):
+    """Display distributions of character length, word count, and related text metrics.
+
+    Calls _ensure_text_stats to lazily compute stats if not already present.
+    Populates report.text_characteristics with mean and median character/word
+    counts and average word length.
+
+    Args:
+        report: EDAReport instance with main_enriched and comments_enriched.
+        show_plots: If True, render plots inline. Defaults to True.
+        save_dir: Optional directory path to save figure PNGs.
+    """
     _section_header(f"2. Text Characteristics  ({report.source})")
 
     _ensure_text_stats(report)
@@ -353,6 +441,16 @@ def analyze_text_characteristics(report: EDAReport, show_plots: bool = True,
 # ---------------------------------------------------------------------------
 def analyze_readability(report: EDAReport, show_plots: bool = True,
                         save_dir: Optional[str] = None):
+    """Display Flesch, Dale-Chall, Grade Level, and Gunning Fog readability distributions.
+
+    Calls _ensure_text_stats to lazily compute readability metrics if needed.
+    Populates report.readability_scores with the mean of each metric.
+
+    Args:
+        report: EDAReport instance with main_enriched and comments_enriched.
+        show_plots: If True, render plots inline. Defaults to True.
+        save_dir: Optional directory path to save figure PNGs.
+    """
     _section_header(f"3. Readability Scores  ({report.source})")
 
     _ensure_text_stats(report)
@@ -411,6 +509,18 @@ def analyze_readability(report: EDAReport, show_plots: bool = True,
 # 4. Feature Presence
 # ---------------------------------------------------------------------------
 def _compute_feature_presence(text: str) -> Dict[str, Any]:
+    """Detect social-media features (mentions, URLs, hashtags, emojis) in text.
+
+    Uses the emoji library if available, otherwise falls back to a Unicode
+    range regex. Intended for use with _apply() on the comment_text column.
+
+    Args:
+        text: Raw comment string to analyze.
+
+    Returns:
+        dict with boolean has_* and integer count keys for mention, url,
+        hashtag, and emoji features.
+    """
     if not text or not str(text).strip():
         return {
             "has_mention": False, "mention_count": 0,
@@ -449,6 +559,17 @@ def _compute_feature_presence(text: str) -> Dict[str, Any]:
 
 def analyze_feature_presence(report: EDAReport, show_plots: bool = True,
                              save_dir: Optional[str] = None):
+    """Detect and visualize the prevalence of mentions, URLs, hashtags, and emojis.
+
+    Computes _compute_feature_presence lazily if columns are not already on
+    comments_enriched. Populates report.feature_presence with percentage of
+    comments containing each feature and index lists for filtered access.
+
+    Args:
+        report: EDAReport instance with main_enriched and comments_enriched.
+        show_plots: If True, render plots inline. Defaults to True.
+        save_dir: Optional directory path to save figure PNGs.
+    """
     _section_header(f"4. Feature Presence  ({report.source})")
 
     comments = report.comments_enriched
@@ -509,6 +630,19 @@ def analyze_feature_presence(report: EDAReport, show_plots: bool = True,
 # ---------------------------------------------------------------------------
 def analyze_sentiment(report: EDAReport, show_plots: bool = True,
                       save_dir: Optional[str] = None):
+    """Run VADER sentiment analysis and display compound score and label distributions.
+
+    Computes vader_compound, vader_pos, vader_neg, vader_neu, and vader_label
+    columns lazily if not already present on comments_enriched. Labels are
+    'positive' (compound >= 0.05), 'negative' (<= -0.05), or 'neutral'.
+    Populates report.sentiment_summary with means, std, and label percentages.
+    Also displays the top 5 most positive and most negative comments.
+
+    Args:
+        report: EDAReport instance with main_enriched and comments_enriched.
+        show_plots: If True, render plots inline. Defaults to True.
+        save_dir: Optional directory path to save figure PNGs.
+    """
     _section_header(f"5. VADER Sentiment Analysis  ({report.source})")
 
     comments = report.comments_enriched
@@ -603,6 +737,18 @@ def analyze_sentiment(report: EDAReport, show_plots: bool = True,
 # ---------------------------------------------------------------------------
 def analyze_temporal_patterns(report: EDAReport, show_plots: bool = True,
                               save_dir: Optional[str] = None):
+    """Visualize comment activity by day of week, hour of day, and date over time.
+
+    Requires a 'created_at' column on comments_enriched; skips gracefully if
+    absent or if all values are NaT. Adds a 'day_of_week' column to
+    comments_enriched. Populates report.temporal_patterns with most active
+    day/hour, mean comments per day, total date span, and valid date fraction.
+
+    Args:
+        report: EDAReport instance with main_enriched and comments_enriched.
+        show_plots: If True, render plots inline. Defaults to True.
+        save_dir: Optional directory path to save figure PNGs.
+    """
     _section_header(f"6. Temporal Patterns  ({report.source})")
 
     comments = report.comments_enriched
@@ -690,6 +836,19 @@ def analyze_temporal_patterns(report: EDAReport, show_plots: bool = True,
 # ---------------------------------------------------------------------------
 def analyze_thread_structure(report: EDAReport, show_plots: bool = True,
                              save_dir: Optional[str] = None):
+    """Analyze per-thread comment counts, unique commenters, and engagement ratios.
+
+    Merges comment counts back onto main_enriched as 'comment_count' (replacing
+    any existing column). Displays a comments-per-thread histogram and a
+    horizontal bar chart of the 10 most-discussed threads. Populates
+    report.thread_structure with mean/median/max comment counts and average
+    unique-commenter and comment-to-commenter ratio metrics.
+
+    Args:
+        report: EDAReport instance with main_enriched and comments_enriched.
+        show_plots: If True, render plots inline. Defaults to True.
+        save_dir: Optional directory path to save figure PNGs.
+    """
     _section_header(f"7. Thread Structure  ({report.source})")
 
     main = report.main_enriched
@@ -772,6 +931,18 @@ def analyze_thread_structure(report: EDAReport, show_plots: bool = True,
 # 8. POS Tag Distributions
 # ---------------------------------------------------------------------------
 def _compute_pos_ratios(text: str) -> Dict[str, Any]:
+    """Compute POS group ratios as a proportion of total tokens via TextBlob.
+
+    Tags text with TextBlob and counts tokens belonging to five sentiment-
+    relevant POS groups (adjectives, adverbs, pronouns, modals, interjections).
+    Returns NaN ratios for empty or unparseable text.
+
+    Args:
+        text: Raw comment string to tag.
+
+    Returns:
+        dict mapping '{group}_ratio' keys to float proportions of total tokens.
+    """
     nan_result = {f"{group}_ratio": np.nan for group in POS_GROUPS}
     if not text or not str(text).strip():
         return nan_result
@@ -792,6 +963,18 @@ def _compute_pos_ratios(text: str) -> Dict[str, Any]:
 
 def analyze_pos_distribution(report: EDAReport, show_plots: bool = True,
                              save_dir: Optional[str] = None):
+    """Compute and visualize POS group ratios across all comments via TextBlob.
+
+    Lazily computes adj_ratio, adv_ratio, pronoun_ratio, modal_ratio, and
+    interjection_ratio columns if absent. Displays a mean-ratio bar chart and
+    distribution boxplots. Populates report.pos_distribution with mean and
+    median ratios for all five POS groups.
+
+    Args:
+        report: EDAReport instance with main_enriched and comments_enriched.
+        show_plots: If True, render plots inline. Defaults to True.
+        save_dir: Optional directory path to save figure PNGs.
+    """
     _section_header(f"8. POS Tag Distributions  ({report.source})")
     display(HTML(
         '<p style="color:#7f8c8d; font-style:italic;">'
