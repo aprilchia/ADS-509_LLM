@@ -1,7 +1,6 @@
 import pandas as pd
 import re
 
-
 def convert(main_df, comments_df):
     """Converts timestamp and date columns in comments_df to a proper datetime.
 

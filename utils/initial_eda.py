@@ -1,8 +1,3 @@
-
-# Commented out comment_count, need to create method to calculate that for the other sources first
-# Have day of week created in here
-
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -41,14 +36,10 @@ try:
 except ImportError:
     _HAS_EMOJI_LIB = False
 
-# ---------------------------------------------------------------------------
 # Global style
-# ---------------------------------------------------------------------------
 sns.set_theme(style="whitegrid", palette="muted", font_scale=1.1)
 
-# ---------------------------------------------------------------------------
 # Constants
-# ---------------------------------------------------------------------------
 REQUIRED_MAIN_COLS = {"post_title", "post_id", "post_author", "created_at"}
 REQUIRED_COMMENT_COLS = {"post_id", "username", "comment_text", "created_at"}
 
@@ -68,10 +59,7 @@ POS_GROUP_LABELS = {
     "interjection": "Interjections (UH)",
 }
 
-
-# ---------------------------------------------------------------------------
 # EDAReport dataclass
-# ---------------------------------------------------------------------------
 @dataclass
 class EDAReport:
     source: str
@@ -107,10 +95,7 @@ class EDAReport:
                     merged[k] = v
         return merged
 
-
-# ---------------------------------------------------------------------------
 # Helper: progress-aware apply
-# ---------------------------------------------------------------------------
 def _apply(series: pd.Series, func, desc: str = "Processing"):  # type: ignore[type-arg]
     """Apply a function to a Series, using tqdm progress bar if available.
 
@@ -127,10 +112,7 @@ def _apply(series: pd.Series, func, desc: str = "Processing"):  # type: ignore[t
         return series.progress_apply(func)  # type: ignore[attr-defined]
     return series.apply(func)
 
-
-# ---------------------------------------------------------------------------
 # Helper: column validation
-# ---------------------------------------------------------------------------
 def _validate_columns(main: pd.DataFrame, comments: pd.DataFrame):
     """Raise ValueError if either DataFrame is missing required columns.
 
@@ -152,10 +134,7 @@ def _validate_columns(main: pd.DataFrame, comments: pd.DataFrame):
             msg += f"Comments df missing required columns: {missing_comments}"
         raise ValueError(msg)
 
-
-# ---------------------------------------------------------------------------
 # Helper: display utilities
-# ---------------------------------------------------------------------------
 def _section_header(title: str):
     """Render a styled HTML section header (h2) in a Jupyter notebook cell.
 
@@ -167,7 +146,6 @@ def _section_header(title: str):
         f'padding-bottom:6px; margin-top:28px;">{title}</h2>'
     ))
 
-
 def _sub_header(title: str):
     """Render a styled HTML sub-header (h3) in a Jupyter notebook cell.
 
@@ -177,7 +155,6 @@ def _sub_header(title: str):
     display(HTML(
         f'<h3 style="color:#34495e; margin-top:16px;">{title}</h3>'
     ))
-
 
 def _display_df(df: pd.DataFrame, caption: str = ""):
     """Display a DataFrame in a Jupyter cell with an optional bold caption.
@@ -190,7 +167,6 @@ def _display_df(df: pd.DataFrame, caption: str = ""):
         display(HTML(f'<p style="font-weight:600; color:#34495e;">{caption}</p>'))
     display(df)
 
-
 def _display_metric(label: str, value: Any) -> None:
     """Render a single key-value metric line as bold HTML in a Jupyter cell.
 
@@ -201,7 +177,6 @@ def _display_metric(label: str, value: Any) -> None:
     display(HTML(
         f'<p style="margin:2px 0;"><strong>{label}:</strong> {value}</p>'
     ))
-
 
 def _display_figure(fig: plt.Figure, report: EDAReport, label: str, # type: ignore
                     save_dir: Optional[str] = None, show: bool = True):
@@ -228,10 +203,7 @@ def _display_figure(fig: plt.Figure, report: EDAReport, label: str, # type: igno
     else:
         plt.close(fig)
 
-
-# ---------------------------------------------------------------------------
 # Helper: batched text statistics
-# ---------------------------------------------------------------------------
 def _compute_text_stats(text: str) -> Dict[str, Any]:
     """Compute a suite of text-level statistics for a single string.
 
@@ -274,7 +246,6 @@ def _compute_text_stats(text: str) -> Dict[str, Any]:
         "gunning_fog": textstat.gunning_fog(text),
     }
 
-
 def _ensure_text_stats(report: EDAReport):
     """Compute text stats columns if they haven't been computed yet."""
     if "char_length" in report.comments_enriched.columns:
@@ -285,10 +256,7 @@ def _ensure_text_stats(report: EDAReport):
     for col in stats_df.columns:
         report.comments_enriched[col] = stats_df[col]
 
-
-# ---------------------------------------------------------------------------
 # 1. Descriptive Statistics
-# ---------------------------------------------------------------------------
 def analyze_descriptive_stats(report: EDAReport, show_plots: bool = True,
                               save_dir: Optional[str] = None):
     """Display basic counts, date range, comments-per-post stats, and missing value heatmaps.
@@ -339,7 +307,7 @@ def analyze_descriptive_stats(report: EDAReport, show_plots: bool = True,
         "Comments Per Post Distribution",
     )
 
-    # ---- Missing values heatmaps ----
+    # Missing values heatmaps
     _sub_header("Missing Values")
     has_missing = main.isnull().any().any() or comments.isnull().any().any()
     if has_missing:
@@ -356,7 +324,7 @@ def analyze_descriptive_stats(report: EDAReport, show_plots: bool = True,
     else:
         display(HTML('<p style="color:green;">No missing values in either DataFrame.</p>'))
 
-    # ---- Comments per post histogram ----
+    # Comments per post histogram
     fig, ax = plt.subplots(figsize=(10, 4))
     sns.histplot(cpt, bins=40, kde=True, edgecolor="black", ax=ax) # type: ignore
     ax.set_title("Comments Per Post Distribution")
@@ -374,15 +342,11 @@ def analyze_descriptive_stats(report: EDAReport, show_plots: bool = True,
         "date_range_start": str(date_start),
         "date_range_end": str(date_end),
         "comments_per_post_mean": float(cpt.mean()),
-        "comments_per_post_median": float(cpt.median()),
-        #"avg_favorites": float(fav.mean()),
-        #"median_favorites": float(fav.median()),
+        "comments_per_post_median": float(cpt.median())
     }
 
 
-# ---------------------------------------------------------------------------
 # 2. Text Characteristics
-# ---------------------------------------------------------------------------
 def analyze_text_characteristics(report: EDAReport, show_plots: bool = True,
                                  save_dir: Optional[str] = None):
     """Display distributions of character length, word count, and related text metrics.
@@ -436,9 +400,7 @@ def analyze_text_characteristics(report: EDAReport, show_plots: bool = True,
     }
 
 
-# ---------------------------------------------------------------------------
 # 3. Readability Scores
-# ---------------------------------------------------------------------------
 def analyze_readability(report: EDAReport, show_plots: bool = True,
                         save_dir: Optional[str] = None):
     """Display Flesch, Dale-Chall, Grade Level, and Gunning Fog readability distributions.
@@ -505,9 +467,7 @@ def analyze_readability(report: EDAReport, show_plots: bool = True,
     }
 
 
-# ---------------------------------------------------------------------------
 # 4. Feature Presence
-# ---------------------------------------------------------------------------
 def _compute_feature_presence(text: str) -> Dict[str, Any]:
     """Detect social-media features (mentions, URLs, hashtags, emojis) in text.
 
@@ -555,7 +515,6 @@ def _compute_feature_presence(text: str) -> Dict[str, Any]:
         "has_emoji": em_count > 0,
         "emoji_count": em_count,
     }
-
 
 def analyze_feature_presence(report: EDAReport, show_plots: bool = True,
                              save_dir: Optional[str] = None):
@@ -624,10 +583,7 @@ def analyze_feature_presence(report: EDAReport, show_plots: bool = True,
         "emoji_indexes": comments.index[comments["has_emoji"]].tolist(),
     }
 
-
-# ---------------------------------------------------------------------------
 # 5. VADER Sentiment
-# ---------------------------------------------------------------------------
 def analyze_sentiment(report: EDAReport, show_plots: bool = True,
                       save_dir: Optional[str] = None):
     """Run VADER sentiment analysis and display compound score and label distributions.
@@ -732,9 +688,7 @@ def analyze_sentiment(report: EDAReport, show_plots: bool = True,
     }
 
 
-# ---------------------------------------------------------------------------
 # 6. Temporal Patterns
-# ---------------------------------------------------------------------------
 def analyze_temporal_patterns(report: EDAReport, show_plots: bool = True,
                               save_dir: Optional[str] = None):
     """Visualize comment activity by day of week, hour of day, and date over time.
@@ -831,9 +785,7 @@ def analyze_temporal_patterns(report: EDAReport, show_plots: bool = True,
     }
 
 
-# ---------------------------------------------------------------------------
 # 7. Thread Structure
-# ---------------------------------------------------------------------------
 def analyze_thread_structure(report: EDAReport, show_plots: bool = True,
                              save_dir: Optional[str] = None):
     """Analyze per-thread comment counts, unique commenters, and engagement ratios.
@@ -926,10 +878,7 @@ def analyze_thread_structure(report: EDAReport, show_plots: bool = True,
         ),
     }
 
-
-# ---------------------------------------------------------------------------
 # 8. POS Tag Distributions
-# ---------------------------------------------------------------------------
 def _compute_pos_ratios(text: str) -> Dict[str, Any]:
     """Compute POS group ratios as a proportion of total tokens via TextBlob.
 
@@ -959,7 +908,6 @@ def _compute_pos_ratios(text: str) -> Dict[str, Any]:
             if tag in tag_set:
                 counts[group] += 1
     return {f"{group}_ratio": counts[group] / total for group in POS_GROUPS}
-
 
 def analyze_pos_distribution(report: EDAReport, show_plots: bool = True,
                              save_dir: Optional[str] = None):
@@ -1033,10 +981,7 @@ def analyze_pos_distribution(report: EDAReport, show_plots: bool = True,
         for g in POS_GROUPS
     })
 
-
-# ---------------------------------------------------------------------------
 # Orchestrator
-# ---------------------------------------------------------------------------
 def initial_eda(
     main: pd.DataFrame,
     comments: pd.DataFrame,
@@ -1114,10 +1059,7 @@ def initial_eda(
     report.summary = report.to_log_dict()
     return report
 
-
-# ---------------------------------------------------------------------------
 # Logging & Persistence
-# ---------------------------------------------------------------------------
 def save_eda_report(report: EDAReport, output_dir: str = _DEFAULT_LOG_DIR):
     """Persist EDA report artifacts to disk in a source-specific subfolder."""
     source_dir = os.path.join(output_dir, report.source)
@@ -1148,7 +1090,6 @@ def save_eda_report(report: EDAReport, output_dir: str = _DEFAULT_LOG_DIR):
         f'<p style="color:green;">Report saved to <code>{source_dir}/</code> '
         f'with prefix <code>{prefix}</code></p>'
     ))
-
 
 def compare_sources(log_dir: str = _DEFAULT_LOG_DIR) -> pd.DataFrame:
     """Load all saved EDA summaries and return a comparison DataFrame."""

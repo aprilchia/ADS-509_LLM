@@ -7,8 +7,7 @@ import re
 from datetime import datetime
 from utils.sleepy import sleep_politely
 
-# --- HELPER FUNCTIONS ---
-
+# HELPER FUNCTIONS
 def get_soup_metafilter(url):
     """Fetches a URL and returns a BeautifulSoup object."""
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) DataScienceProject/1.0 tkirk@sandiego.edu'}
@@ -120,8 +119,7 @@ def parse_comments_metafilter(post_soup, thread_url):
             
     return comments_data
 
-# --- MAIN EXECUTION FUNCTIONS ---
-
+# MAIN EXECUTION FUNCTIONS
 def scrape_main_feed_metafilter(tag='politics', pages=1):
     """Loops through feed pages and returns a DataFrame of posts."""
     all_posts = []
@@ -217,8 +215,7 @@ def scrape_metafilter(tag='politics', pages=1):
     return main_df, comments_df
 
 
-# --- WORKFLOW ---
-
+# WORKFLOW
 if __name__ == "__main__":
     # Scrape MetaFilter for politics posts
     df_main, df_comments = scrape_metafilter(tag='politics', pages=2)
