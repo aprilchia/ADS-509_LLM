@@ -1,7 +1,7 @@
 [project]
 name = "ads-509-llm"
 version = "0.1.0"
-description = "Add your description here"
+description = "A journey to discover how different social media comments are from one site to the next"
 authors = [
     { name = "April Chia", email = "achia@sandiego.edu" },
     { name = "Taylor Kirk", email = "tkirk@sandiego.edu" },
@@ -14,8 +14,14 @@ dependencies = [
     "bs4>=0.0.2",
     "datasets>=4.5.0",
     "datetime>=6.0",
+    "dotenv>=0.9.9",
     "emoji>=2.15.0",
+    "google-api-python-client>=2.190.0",
+    "huggingface-hub>=1.4.1",
+    "logging>=0.4.9.6",
     "matplotlib>=3.10.8",
+    "numpy>=2.4.1",
+    "optuna>=4.7.0",
     "pandas>=2.3.3",
     "regex>=2025.11.3",
     "requests>=2.32.5",
