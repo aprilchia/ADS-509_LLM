@@ -102,7 +102,8 @@ All sources were normalized to the same column names to enable cross-source EDA 
 ├── scripts/                    # Web scrapers
 │   ├── hn_scrape.py            # Hacker News (Algolia API)
 │   ├── metafilter_scrape.py    # MetaFilter (HTML parsing)
-│   └── reddit_scrape.py        # Reddit (JSON API)
+│   ├── reddit_scrape.py        # Reddit (JSON API)
+│   └── youtube_scrape.py       # YouTube (Data API v3)
 ├── utils/                      # Shared utilities
 │   ├── initial_eda.py          # EDA analysis engine
 │   ├── metafilter_date_convert.py  # Date normalization for MetaFilter
@@ -112,9 +113,9 @@ All sources were normalized to the same column names to enable cross-source EDA 
 │   ├── self_labeling.py        # Multi-LLM majority vote logic
 │   └── sleepy.py               # Polite rate-limiting delays
 ├── main_notebook.ipynb         # EDA summaries + baseline models
-├── fine_tuning_script.ipynb    # Fine-tuning workflows (GPU)
+├── fine_tuning.ipynb           # Fine-tuning workflows (GPU)
 ├── evaluation.ipynb            # Model evaluation (GPU)
-└── pyproject.toml
+└── pyproject.toml              # Project dependency management file
 ```
 
 ### Notebook Split
